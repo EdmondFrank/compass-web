@@ -1,67 +1,54 @@
 import React, { useMemo } from 'react';
-import EChartX from '@common/components/EChartX';
-import {
-  ChartComponentProps,
-  getLineOption,
-  line,
-} from '@modules/analyze/options';
-import BaseCard from '@common/components/BaseCard';
-import useMetricQueryData from '@modules/analyze/hooks/useMetricQueryData';
-import {
-  pickKeyToXAxis,
-  pickKeyToYAxis,
-} from '@modules/analyze/options/metric';
+import { genSeries, getLineOption, lineArea } from '@modules/analyze/options';
 import { Activity } from '@modules/analyze/Misc/SideBar/menus';
+import {
+  getLegendName,
+  TransOpts,
+  TransResult,
+} from '@modules/analyze/DataTransform/transToAxis';
+import BaseCard from '@common/components/BaseCard';
+import LoadInView from '@modules/analyze/components/LoadInView';
+import Chart from '@modules/analyze/components/Chart';
+import { LineSeriesOption } from 'echarts';
 
-const Overview: React.FC<ChartComponentProps> = ({
-  loading = false,
-  xAxis,
-  yAxis,
-}) => {
-  const echartsOpts = useMemo(() => {
-    const series = yAxis.map(({ name, data }) => {
-      return line({ name, data });
-    });
-    return getLineOption({ xAxisData: xAxis, series });
-  }, [xAxis, yAxis]);
+const tansOpts: TransOpts = {
+  metricType: 'metricActivity',
+  xAxisKey: 'grimoireCreationDate',
+  yAxisOpts: [{ legendName: 'activity score', valueKey: 'activityScore' }],
+};
 
+const getOptions = ({ xAxis, yResults }: TransResult) => {
+  const series = genSeries<LineSeriesOption>(
+    yResults,
+    ({ legendName, label, level, isCompare, color, data }) => {
+      return lineArea({
+        name: getLegendName(legendName, { label, level, isCompare }),
+        data: data,
+        color,
+      });
+    }
+  );
+  return getLineOption({ xAxisData: xAxis, series });
+};
+
+const Overview = () => {
   return (
     <BaseCard
-      id={Activity.Overview}
       title="Overview"
-      description="The growth in the aggregated count of unique contributors analyzed during the selected time period."
+      id={Activity.Overview}
+      description={
+        'Community Activity is used to describe how active an open source community is.'
+      }
     >
-      {(containerRef) => (
-        <EChartX
-          option={echartsOpts}
-          loading={loading}
-          containerRef={containerRef}
-        />
-      )}
+      {(ref) => {
+        return (
+          <LoadInView containerRef={ref}>
+            <Chart getOptions={getOptions} tansOpts={tansOpts} />
+          </LoadInView>
+        );
+      }}
     </BaseCard>
   );
 };
 
-const OverviewWithData = () => {
-  const data = useMetricQueryData();
-  const isLoading = data?.some((i) => i.loading);
-
-  const xAxis = useMemo(() => {
-    return pickKeyToXAxis(data, {
-      typeKey: 'metricActivity',
-      valueKey: 'grimoireCreationDate',
-    });
-  }, [data]);
-
-  const yAxis = useMemo(() => {
-    return pickKeyToYAxis(data, {
-      typeKey: 'metricActivity',
-      valueKey: 'activityScore',
-      legendName: 'Activity Score',
-    });
-  }, [data]);
-
-  return <Overview loading={isLoading} xAxis={xAxis} yAxis={yAxis} />;
-};
-
-export default OverviewWithData;
+export default Overview;

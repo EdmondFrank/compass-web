@@ -4,34 +4,22 @@ import useQueryDateRange from './useQueryDateRange';
 import useCompareItems from './useCompareItems';
 
 const useMetricQueryData = () => {
+  const queryClient = useQueryClient();
   const { timeStart, timeEnd } = useQueryDateRange();
   const { compareItems } = useCompareItems();
-  const queryClient = useQueryClient();
 
   return compareItems.map(({ label, level }) => {
-    const data = queryClient.getQueryData<MetricQuery>(
-      useMetricQuery.getKey({
-        label,
-        level,
-        start: timeStart,
-        end: timeEnd,
-      })
-    );
-    const states = queryClient.getQueryState(
-      useMetricQuery.getKey({
-        label,
-        level,
-        start: timeStart,
-        end: timeEnd,
-      })
-    );
-
+    const variables = { label, level, start: timeStart, end: timeEnd };
+    const key = useMetricQuery.getKey(variables);
+    const data = queryClient.getQueryData<MetricQuery>(key);
+    const state = queryClient.getQueryState<MetricQuery>(key);
     return {
       label,
       level,
-      loading: states?.status === 'loading',
+      loading: state?.status === 'loading',
       result: data,
     };
   });
 };
+
 export default useMetricQueryData;

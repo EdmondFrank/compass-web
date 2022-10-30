@@ -1,70 +1,56 @@
 import React, { useMemo } from 'react';
-import { MetricQuery } from '@graphql/generated';
-import EChartX from '@common/components/EChartX';
-import {
-  ChartComponentProps,
-  getLineOption,
-  lineArea,
-  mapToLineSeries,
-  toTimeXAxis,
-} from '@modules/analyze/options';
-import BaseCard from '@common/components/BaseCard';
-import useMetricQueryData from '@modules/analyze/hooks/useMetricQueryData';
-import {
-  pickKeyToXAxis,
-  pickKeyToYAxis,
-} from '@modules/analyze/options/metric';
+import { genSeries, getLineOption, lineArea } from '@modules/analyze/options';
 import { Activity } from '@modules/analyze/Misc/SideBar/menus';
+import {
+  getLegendName,
+  TransOpts,
+  TransResult,
+} from '@modules/analyze/DataTransform/transToAxis';
+import { LineSeriesOption } from 'echarts';
+import BaseCard from '@common/components/BaseCard';
+import LoadInView from '@modules/analyze/components/LoadInView';
+import Chart from '@modules/analyze/components/Chart';
 
-const CommentFrequency: React.FC<ChartComponentProps> = ({
-  loading = false,
-  xAxis,
-  yAxis,
-}) => {
-  const echartsOpts = useMemo(() => {
-    const series = yAxis.map(({ name, data }) => {
-      return lineArea({ name, data });
-    });
-    return getLineOption({ xAxisData: xAxis, series });
-  }, [xAxis, yAxis]);
+const tansOpts: TransOpts = {
+  metricType: 'metricActivity',
+  xAxisKey: 'grimoireCreationDate',
+  yAxisOpts: [
+    { legendName: 'comment frequency', valueKey: 'commentFrequency' },
+  ],
+};
 
+const getOptions = ({ xAxis, yResults }: TransResult) => {
+  const series = genSeries<LineSeriesOption>(
+    yResults,
+    ({ legendName, label, level, isCompare, color, data }) => {
+      return lineArea({
+        name: getLegendName(legendName, { label, level, isCompare }),
+        data: data,
+        color,
+      });
+    }
+  );
+  return getLineOption({ xAxisData: xAxis, series });
+};
+
+const CommentFrequency = () => {
   return (
     <BaseCard
-      id={Activity.CommentFrequency}
       title="Comment frequency"
-      description="The growth in the aggregated count of unique contributors analyzed during the selected time period."
+      id={Activity.CommentFrequency}
+      description={
+        'Determine the average number of comments per issue created in the last 90 days.'
+      }
     >
-      {(containerRef) => (
-        <EChartX
-          option={echartsOpts}
-          loading={loading}
-          containerRef={containerRef}
-        />
-      )}
+      {(ref) => {
+        return (
+          <LoadInView containerRef={ref}>
+            <Chart getOptions={getOptions} tansOpts={tansOpts} />
+          </LoadInView>
+        );
+      }}
     </BaseCard>
   );
 };
 
-const CommentFrequencyWithData = () => {
-  const data = useMetricQueryData();
-  const isLoading = data?.some((i) => i.loading);
-
-  const xAxis = useMemo(() => {
-    return pickKeyToXAxis(data, {
-      typeKey: 'metricActivity',
-      valueKey: 'grimoireCreationDate',
-    });
-  }, [data]);
-
-  const yAxis = useMemo(() => {
-    return pickKeyToYAxis(data, {
-      typeKey: 'metricActivity',
-      valueKey: 'commentFrequency',
-      legendName: 'Comment Frequency',
-    });
-  }, [data]);
-
-  return <CommentFrequency loading={isLoading} xAxis={xAxis} yAxis={yAxis} />;
-};
-
-export default CommentFrequencyWithData;
+export default CommentFrequency;

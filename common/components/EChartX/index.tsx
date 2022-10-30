@@ -1,11 +1,14 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useDeepCompareEffect, useInViewport } from 'ahooks';
-import { connect, disconnect, init, getInstanceByDom } from 'echarts';
+import { connect, init, getInstanceByDom } from 'echarts';
 import type { CSSProperties } from 'react';
 import type { EChartsOption, ECharts, SetOptionOpts } from 'echarts';
 import { useResizeDetector } from 'react-resize-detector';
 
+connect('group-time');
+
 export interface ReactEChartsProps {
+  _flag?: string;
   option: EChartsOption;
   style?: CSSProperties;
   settings?: SetOptionOpts;
@@ -15,6 +18,7 @@ export interface ReactEChartsProps {
 }
 
 const EChartX: React.FC<ReactEChartsProps> = ({
+  _flag,
   option,
   style,
   settings = { notMerge: true },
@@ -25,12 +29,15 @@ const EChartX: React.FC<ReactEChartsProps> = ({
   const [inViewport] = useInViewport(containerRef);
   const chartRef = useRef<HTMLDivElement>(null);
 
+  if (_flag === 'debug') {
+    console.log('debug echartx', { inViewport, loading, option });
+  }
+
   useEffect(() => {
     // init
     let chart: ECharts | undefined;
     if (chartRef.current !== null) {
       chart = init(chartRef.current, theme);
-      connect('group1');
     }
     return () => {
       chart?.dispose();
@@ -51,7 +58,7 @@ const EChartX: React.FC<ReactEChartsProps> = ({
       const chart = getInstanceByDom(chartRef.current)!;
       if (inViewport) {
         loading === true ? chart?.showLoading() : chart?.hideLoading();
-        chart!.group = 'group1';
+        chart!.group = 'group-time';
       } else {
         chart!.group = '';
       }
@@ -80,4 +87,4 @@ const EChartX: React.FC<ReactEChartsProps> = ({
   );
 };
 
-export default EChartX;
+export default React.memo(EChartX);

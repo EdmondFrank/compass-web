@@ -1,4 +1,6 @@
 import set from 'lodash/set';
+import parseISO from 'date-fns/parseISO';
+import getUnixTime from 'date-fns/getUnixTime';
 import { Level } from '@modules/analyze/constant';
 import { MetricQuery } from '@graphql/generated';
 import { formatISO, repoUrlFormat, toFixed } from '@common/utils';
@@ -9,7 +11,7 @@ interface DateItem {
   result: MetricQuery | undefined;
 }
 
-export interface TransResult {
+export interface YResult {
   label: string;
   level: Level;
   yAxisResult: {
@@ -19,23 +21,26 @@ export interface TransResult {
   }[];
 }
 
+export interface TransResult {
+  xAxis: string[];
+  yResults: YResult[];
+}
+
+export interface TransOpts {
+  metricType: Exclude<keyof MetricQuery, '__typename'>;
+  xAxisKey: string;
+  yAxisOpts: {
+    legendName: string;
+    valueKey: string;
+    valueFormat?: (v: any) => number;
+  }[];
+}
+
 // todo add generic type
 export function transToAxis(
   data: Array<DateItem>,
-  {
-    metricType,
-    xAxisKey,
-    yAxisOpts,
-  }: {
-    metricType: Exclude<keyof MetricQuery, '__typename'>;
-    xAxisKey: string;
-    yAxisOpts: {
-      legendName: string;
-      valueKey: string;
-      valueFormat?: (v: any) => number;
-    }[];
-  }
-): { xAxis: string[]; yResults: TransResult[] } {
+  { metricType, xAxisKey, yAxisOpts }: TransOpts
+): TransResult {
   let xAxis: string[] = [];
   const tempMap: any = {};
   const yResults: any = [];
@@ -54,7 +59,10 @@ export function transToAxis(
     });
 
     // get value from map and fill null by xAxisKey
-    xAxis = Object.keys(tempMap);
+    xAxis = Object.keys(tempMap).sort((a, b) => {
+      return getUnixTime(parseISO(a)) - getUnixTime(parseISO(b));
+    });
+
     const yAxisResult: any = [];
     yAxisOpts.forEach((yAxisOpt) => {
       const {

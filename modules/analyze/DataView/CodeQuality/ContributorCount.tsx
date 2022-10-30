@@ -1,98 +1,65 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import EChartX from '@common/components/EChartX';
-import { ChartProps, getLineOption, line } from '@modules/analyze/options';
-import BaseCard from '@common/components/BaseCard';
-import useMetricQueryData from '@modules/analyze/hooks/useMetricQueryData';
+import React from 'react';
+import { genSeries, getLineOption, line } from '@modules/analyze/options';
 import { CodeQuality } from '@modules/analyze/Misc/SideBar/menus';
-import { colorGenerator } from '@modules/analyze/options/color';
 import {
   getLegendName,
-  transToAxis,
+  TransOpts,
+  TransResult,
 } from '@modules/analyze/DataTransform/transToAxis';
 import { LineSeriesOption } from 'echarts';
-import { toFixed } from '@common/utils';
+import BaseCard from '@common/components/BaseCard';
+import LoadInView from '@modules/analyze/components/LoadInView';
+import Chart from '@modules/analyze/components/Chart';
 
-const ContributorCount: React.FC<ChartProps> = ({
-  loading = false,
-  xAxis,
-  comparesYAxis,
-}) => {
-  const echartsOpts = useMemo(() => {
-    const gen = colorGenerator();
-    const isCompare = comparesYAxis.length > 1;
-    const series = comparesYAxis.reduce<LineSeriesOption[]>(
-      (acc, { label, level, yAxisResult }) => {
-        const result = yAxisResult.map((item) => {
-          const { legendName, data } = item;
-          const color = isCompare ? gen(label) : '';
-          return line({
-            name: getLegendName(legendName, { label, level, isCompare }),
-            data: data,
-            color,
-          });
-        });
-        acc = [...acc, ...result];
-        return acc;
-      },
-      []
-    );
+const tansOpts: TransOpts = {
+  metricType: 'metricCodequality',
+  xAxisKey: 'grimoireCreationDate',
+  yAxisOpts: [
+    { legendName: 'total', valueKey: 'contributorCount' },
+    {
+      legendName: 'code reviewer',
+      valueKey: 'activeC1PrCommentsContributorCount',
+    },
+    {
+      legendName: 'pr creator',
+      valueKey: 'activeC1PrCreateContributorCount',
+    },
+    { legendName: 'commit author', valueKey: 'activeC2ContributorCount' },
+  ],
+};
 
-    return getLineOption({ xAxisData: xAxis, series });
-  }, [xAxis, comparesYAxis]);
+const getOptions = ({ xAxis, yResults }: TransResult) => {
+  const series = genSeries<LineSeriesOption>(
+    yResults,
+    ({ legendName, label, level, isCompare, color, data }) => {
+      return line({
+        name: getLegendName(legendName, { label, level, isCompare }),
+        data: data,
+        color,
+      });
+    }
+  );
+  return getLineOption({ xAxisData: xAxis, series });
+};
 
+const ContributorCount = () => {
   return (
     <BaseCard
       title="Contributors"
       id={CodeQuality.ContributorCount}
-      description={`Determine how many active pr creators, code reviewers, commit authors there are in the past 90 days.`}
+      description={
+        'Determine how many active pr creators, code reviewers, commit authors there are in the past 90 days.'
+      }
     >
-      {(containerRef) => (
-        <EChartX
-          option={echartsOpts}
-          loading={loading}
-          containerRef={containerRef}
-        />
-      )}
+      {(ref) => {
+        return (
+          <LoadInView containerRef={ref}>
+            <Chart getOptions={getOptions} tansOpts={tansOpts} />
+          </LoadInView>
+        );
+      }}
     </BaseCard>
   );
 };
 
-const ContributorCountWithData = () => {
-  const data = useMetricQueryData();
-  const isLoading = data?.some((i) => i.loading);
-
-  const { xAxis, yResults } = useMemo(() => {
-    return transToAxis(data, {
-      metricType: 'metricCodequality',
-      xAxisKey: 'grimoireCreationDate',
-      yAxisOpts: [
-        {
-          legendName: 'Total',
-          valueKey: 'contributorCount',
-        },
-        {
-          legendName: 'Code reviewer',
-          valueKey: 'activeC1PrCommentsContributorCount',
-        },
-        {
-          legendName: 'PR creator',
-          valueKey: 'activeC1PrCreateContributorCount',
-        },
-        {
-          legendName: 'Commit author',
-          valueKey: 'activeC2ContributorCount',
-        },
-      ],
-    });
-  }, [data]);
-
-  return (
-    <ContributorCount
-      loading={isLoading}
-      xAxis={xAxis}
-      comparesYAxis={yResults}
-    />
-  );
-};
-
-export default ContributorCountWithData;
+export default ContributorCount;
