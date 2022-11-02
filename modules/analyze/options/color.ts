@@ -1,42 +1,36 @@
-import ColorLib from 'color';
+import palettes from './palette';
 
-const palette = {
-  GeekBlue: '',
+// default index in palette
+export const DefaultIndex = 3;
+
+export const colors = palettes.map((i) => i[DefaultIndex]);
+
+export const getPalette = (index: number) => {
+  return palettes[index % palettes.length];
 };
 
-const colors = [
-  '#5470c6',
-  '#91cc75',
-  '#fac858',
-  '#ee6666',
-  '#73c0de',
-  '#3ba272',
-  '#fc8452',
-  '#9a60b4',
-  '#ea7ccc',
-];
-
-const getColor = (index: number) => {
-  return colors[index % colors.length];
+export const getPaletteColor = (palette: string[], index: number) => {
+  return palette[index % palette.length];
 };
 
+/**
+ * @deprecated
+ */
 export const colorGenerator = () => {
-  let colorIndex = 0;
-  const labelMap: Record<string, { color: string; count: number }> = {};
+  let labelIndex = 0;
+  const labelMap: Record<string, { paletteIndex: number; count: number }> = {};
 
   return (label: string) => {
     if (!labelMap[label]) {
-      const mainColor = getColor(colorIndex);
-      labelMap[label] = { color: mainColor, count: 0 };
-      colorIndex++;
-      return mainColor;
+      const palette = getPalette(labelIndex);
+      labelMap[label] = { paletteIndex: labelIndex, count: DefaultIndex };
+      labelIndex++;
+      return palette[DefaultIndex];
     }
 
     labelMap[label].count++;
-    const { color, count } = labelMap[label];
-
-    return ColorLib(color)
-      .darken(count * 0.2)
-      .hex();
+    const { paletteIndex, count } = labelMap[label];
+    const palette = palettes[paletteIndex];
+    return palette[count % palette.length];
   };
 };

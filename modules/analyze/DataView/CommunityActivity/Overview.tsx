@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { genSeries, getLineOption, lineArea } from '@modules/analyze/options';
 import { Activity } from '@modules/analyze/Misc/SideBar/menus';
 import {
@@ -9,7 +9,9 @@ import {
 import BaseCard from '@common/components/BaseCard';
 import LoadInView from '@modules/analyze/components/LoadInView';
 import Chart from '@modules/analyze/components/Chart';
+import { ChartThemeState } from '@modules/analyze/context';
 import { LineSeriesOption } from 'echarts';
+import { transMarkingSystem } from '@modules/analyze/DataTransform/transMarkingSystem';
 
 const tansOpts: TransOpts = {
   metricType: 'metricActivity',
@@ -17,21 +19,32 @@ const tansOpts: TransOpts = {
   yAxisOpts: [{ legendName: 'activity score', valueKey: 'activityScore' }],
 };
 
-const getOptions = ({ xAxis, yResults }: TransResult) => {
+let hundredMarkingSys = true;
+const getOptions = (
+  { xAxis, yResults }: TransResult,
+  theme?: ChartThemeState
+) => {
   const series = genSeries<LineSeriesOption>(
     yResults,
     ({ legendName, label, level, isCompare, color, data }) => {
+      hundredMarkingSys && (data = data.map((i) => transMarkingSystem(i)));
       return lineArea({
         name: getLegendName(legendName, { label, level, isCompare }),
         data: data,
         color,
       });
-    }
+    },
+    theme
   );
   return getLineOption({ xAxisData: xAxis, series });
 };
 
 const Overview = () => {
+  const [markingSys, setMarkingSys] = useState(true);
+  const getMarkingSys = (val: boolean) => {
+    hundredMarkingSys = val;
+    setMarkingSys(val);
+  };
   return (
     <BaseCard
       title="Overview"
@@ -39,6 +52,8 @@ const Overview = () => {
       description={
         'Community Activity is used to describe how active an open source community is.'
       }
+      showMarkingSysBtn={true}
+      getMarkingSys={(val) => getMarkingSys(val)}
     >
       {(ref) => {
         return (

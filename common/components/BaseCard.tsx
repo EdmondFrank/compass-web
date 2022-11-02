@@ -1,7 +1,10 @@
 import React, { useState, RefObject, useRef, ReactNode } from 'react';
 import classnames from 'classnames';
 import { BiFullscreen, BiExitFullscreen } from 'react-icons/bi';
+import Image from 'next/image';
 import { useHotkeys } from 'react-hotkeys-hook';
+import Svg100 from 'public/images/analyze/number-100.svg';
+import Svg1 from 'public/images/analyze/number-1.svg';
 
 const Loading: React.FC<{ className: string }> = ({ className }) => (
   <div className={classnames(className, 'animate-pulse p-10')}>
@@ -28,7 +31,9 @@ interface BaseCardProps {
   title?: string;
   description?: string;
   headRight?: ReactNode;
+  showMarkingSysBtn?: boolean;
   children: ((containerRef: RefObject<HTMLElement>) => ReactNode) | ReactNode;
+  getMarkingSys?: (pre: boolean) => void;
 }
 
 const BaseCard: React.FC<BaseCardProps> = ({
@@ -39,10 +44,13 @@ const BaseCard: React.FC<BaseCardProps> = ({
   title = '',
   description = '',
   headRight = null,
+  showMarkingSysBtn = false,
+  getMarkingSys,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const [fullScreen, setFullScreen] = useState(false);
+  const [markingSys, setMarkingSys] = useState(true);
 
   const cls = classnames(
     className,
@@ -54,6 +62,11 @@ const BaseCard: React.FC<BaseCardProps> = ({
         fullScreen,
     }
   );
+
+  const changeMarkingSys = (pre: boolean) => {
+    setMarkingSys(pre);
+    getMarkingSys && getMarkingSys(pre);
+  };
 
   useHotkeys('esc', (e, he) => {
     e.preventDefault();
@@ -79,7 +92,29 @@ const BaseCard: React.FC<BaseCardProps> = ({
         </a>
       </h2>
       <p className="mb-4 text-sm">{description}</p>
+      {}
       <div className="absolute right-4 top-4 flex items-center ">
+        {showMarkingSysBtn ? (
+          <div
+            className="group cursor-pointer p-2 transition md:hidden"
+            onClick={() => {
+              changeMarkingSys(!markingSys);
+            }}
+          >
+            {markingSys ? <Svg1 /> : <Svg100 />}
+            <div
+              style={{ boxShadow: 'rgba(0, 0, 0, 0.2) 1px 2px 10px' }}
+              className="absolute top-[100%] right-1 z-dropdown hidden w-[280px] rounded border border-white bg-white p-2 text-sm group-hover:block"
+            >
+              {!markingSys
+                ? '[0, 100]: distribution result based on [0, 1]'
+                : '[0, 1]: absolute score of the model'}
+            </div>
+          </div>
+        ) : (
+          ''
+        )}
+
         {headRight}
         <div
           className="cursor-pointer p-2 md:hidden"
